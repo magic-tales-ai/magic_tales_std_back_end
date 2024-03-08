@@ -23,7 +23,7 @@ pip install marshmallow
 - Set IP and PORT for the service
 
 ```
-  SERVER_HOST="127.0.0.1"
+  SERVER_HOST="localhost"
   SERVER_PORT=8000
 ```
 
