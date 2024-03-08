@@ -42,6 +42,7 @@ pip install marshmallow
 
 # Notes
 - **Run the service on localhost and por 8000, so the front end can connect to it**
+- **To test API running correctly, open swagger page: http://localhost:8000/docs**
 
 
   
