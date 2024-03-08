@@ -19,7 +19,7 @@ pip install marshmallow
 - Install required packages 
 
 # Configuration 
-- Edit .env file
+- Edit .env file (the repo has a .env-example file, you can copy this and rename to .env)
 - Set IP and PORT for the service
 
 ```
