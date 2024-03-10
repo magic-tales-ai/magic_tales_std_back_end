@@ -12,6 +12,7 @@ pip install python-dotenv
 pip install mysqlclient 
 pip install pyjwt
 pip install marshmallow
+pip install python-multipart
 ```
 
 # Installation 

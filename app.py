@@ -39,7 +39,8 @@ app.add_middleware(AddJWTToResponseMiddleware, excluded_paths=EXCLUDED_PATHS)
 app.add_middleware(ErrorHandlerMiddleware)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+static_folder = os.getenv('STATIC_FOLDER')
+app.mount(static_folder, StaticFiles(directory=static_folder), name="static")
 
 if __name__ == '__main__':
     uvicorn.run('app:app', host=os.getenv('SERVER_HOST'), port=int(os.getenv('SERVER_PORT')), reload=True)
