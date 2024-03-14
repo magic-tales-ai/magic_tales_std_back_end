@@ -2,8 +2,9 @@ from db import Base
 from sqlalchemy import Column, Integer, JSON, Float, Text, Boolean, TIMESTAMP
 from datetime import datetime
 
+
 class Plan(Base):
-    __tablename__ = 'plans'
+    __tablename__ = "plans"
     id = Column(Integer, primary_key=True)
     name = Column(Text, unique=True)
     image = Column(Text)

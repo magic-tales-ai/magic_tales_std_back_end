@@ -19,6 +19,7 @@ AsyncSessionLocal = sessionmaker(
 
 Base = declarative_base()
 
+
 # Dependency to get async session
 async def get_session():
     async with AsyncSessionLocal() as session:
