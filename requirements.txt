@@ -4,3 +4,4 @@ pip install python-dotenv
 pip install mysqlclient # Driver MySQL
 pip install pyjwt
 pip install marshmallow
+pip install aiomysql

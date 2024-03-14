@@ -12,4 +12,8 @@ class User(Base):
     password = Column(String(255), nullable=False)
     plan_id = Column(ForeignKey('plans.id'))
     plan = relationship('Plan', lazy='joined')
+    assistant_id = Column(String(255))
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
+
+    def __str__(self):
+        return f"User info: username='{self.username}', email='{self.email}', created_at='{self.created_at}')"
