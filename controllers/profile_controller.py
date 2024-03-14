@@ -1,8 +1,9 @@
 from fastapi import APIRouter, status, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from db import get_session
+
+from db import get_session, transaction_context
 from services.session_service import check_token
 from models.db.profile import Profile
 from models.api.profile_api import ProfileAPI
@@ -92,13 +93,13 @@ async def post(
         ProfileAPI: The created Profile data, including its new ID.
     """
     try:
-        # Start a transaction context
-        async with session.begin():
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
             instance = Profile(user_id=data.user_id, details=data.details)
             session.add(instance)
             # The transaction will be committed at the end of the with block
             # if no exceptions occur.
-
+        logger.debug("Transaction committed.")
         # After successful commit, refresh to get the new ID
         await session.refresh(instance)
         data.id = instance.id

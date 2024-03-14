@@ -1,8 +1,7 @@
 from fastapi import APIRouter, status, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import select  # Use future select for compatibility with async
-from db import get_session
+from db import get_session, AsyncSession
 from models.db.plan import Plan
 import logging
 

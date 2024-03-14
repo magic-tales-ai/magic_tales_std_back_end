@@ -1,8 +1,9 @@
 from fastapi import APIRouter, status, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
-from db import get_session
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db import get_session, transaction_context
 from services.session_service import check_token
 from models.db.profile import Profile
 from models.db.story import Story
@@ -36,7 +37,8 @@ async def get(
         List[Story]: A list of Story objects.
     """
     try:
-        async with session.begin():
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
             profiles_ids = await session.execute(
                 select(Profile.id).where(Profile.user_id == token_data.get("user_id"))
             )
@@ -45,6 +47,8 @@ async def get(
             stories = await session.execute(
                 select(Story).filter(Story.profile_id.in_(profiles_ids))
             )
+        logger.debug("Transaction committed.")
+
         return stories.scalars().all()
     except SQLAlchemyError as e:
         logger.error(f"Failed to fetch stories: {e}")
@@ -98,7 +102,8 @@ async def post(
         StoryAPI: The created Story object with its new ID.
     """
     try:
-        async with session.begin():
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
             instance = Story(
                 profile_id=data.profile_id,
                 title=data.title,
@@ -107,6 +112,7 @@ async def post(
                 last_successful_step=data.last_successful_step,
             )
             session.add(instance)
+        logger.debug("Transaction committed.")
         await session.refresh(instance)
         data.id = instance.id
         return data
@@ -134,7 +140,8 @@ async def delete(
         dict: A message indicating the outcome of the deletion attempt.
     """
     try:
-        async with session.begin():
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
             result = await session.execute(
                 select(Story)
                 .join(Profile)
@@ -146,6 +153,7 @@ async def delete(
                     status_code=404, detail="Story not found or not owned by the user"
                 )
             session.delete(story)
+        logger.debug("Transaction committed.")
         return {"message": "Story deleted successfully"}
     except SQLAlchemyError as e:
         await session.rollback()  # Explicit rollback in case of SQLAlchemy errors

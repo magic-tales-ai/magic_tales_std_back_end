@@ -1,9 +1,10 @@
 from fastapi import APIRouter, status, Depends, HTTPException, Form
 from typing import Annotated
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from db import get_session
+
+from db import get_session, AsyncSession
 from services.session_service import (
     create_access_token,
     hash_password_async,
@@ -17,6 +18,7 @@ import re
 import logging
 
 from utils.log_utils import get_logger
+from db import transaction_context
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -95,7 +97,8 @@ async def register(
         RegisterAPI: The registered user's information, including the new user ID.
     """
     try:
-        async with session.begin():  # Begin a transaction
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
             result = await session.execute(select(Plan).where(Plan.name == "Free Plan"))
             free_plan = result.scalars().first()
 
@@ -115,7 +118,7 @@ async def register(
             session.add(new_user)
             # The transaction will be committed at the end of the async with block
             # No need to explicitly call commit here
-
+        logger.debug("Transaction committed.")
         await session.refresh(new_user)
 
         logger.info(f"Registered new user: {username}")
@@ -148,8 +151,8 @@ async def login_swagger(
         dict: A dictionary containing the "access_token" and "token_type".
     """
     try:
-        # Start a transaction
-        async with session.begin():
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
             query = select(User).where(User.email == username)
             result = await session.execute(query)
             user = result.scalars().first()
@@ -163,6 +166,8 @@ async def login_swagger(
             access_token = create_access_token(token_data)
 
         # Transaction is committed here at the end of the `async with` block.
+        logger.debug("Transaction committed.")
+
         return {"access_token": access_token, "token_type": "bearer"}
     except SQLAlchemyError as e:
         await session.rollback()  # Rollback in case of any error
@@ -188,14 +193,16 @@ async def recover_password(
         dict: A message indicating the outcome of the password recovery attempt.
     """
     try:
-        # Start a transaction for read-only purposes
-        async with session.begin():
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
             query = select(User).where(User.email == email)
             result = await session.execute(query)
             user = result.scalars().first()
 
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
+
+        logger.debug("Transaction committed.")
 
         # TODO: The actual sending of a recovery email should be implemented here.
         # It's assumed to be an asynchronous operation.

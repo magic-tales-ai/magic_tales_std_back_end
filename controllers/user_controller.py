@@ -1,9 +1,10 @@
 from fastapi import APIRouter, status, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
-from db import get_session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
+
+from db import get_session, transaction_context
 from services.session_service import check_token
 from models.db.story import Story
 from models.db.profile import Profile
@@ -76,7 +77,8 @@ async def change_user_plan(
         bool: True if the plan was changed successfully, False otherwise.
     """
     try:
-        async with session.begin():
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
             user = await session.get(User, token_data.get("user_id"))
             if not user:
                 logger.error(f"User {token_data.get('user_id')} not found")
@@ -89,7 +91,7 @@ async def change_user_plan(
 
             user.plan_id = plan.id
             # Transaction will be automatically committed here
-
+        logger.debug("Transaction committed.")
         logger.info(f"User {user.id}'s plan changed to {plan.id}")
         return True
 
