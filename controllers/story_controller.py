@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, status, Depends, HTTPException
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -7,6 +8,7 @@ from db import get_session, transaction_context
 from services.session_service import check_token
 from models.db.profile import Profile
 from models.db.story import Story
+from models.dto.story import Story as StoryDTO
 from models.api.story_api import StoryAPI
 import logging
 
@@ -21,7 +23,7 @@ logger = get_logger(__name__)
 story_router = APIRouter(prefix="/story", tags=["Story"])
 
 
-@story_router.get("/", status_code=status.HTTP_200_OK)
+@story_router.get("/", status_code=status.HTTP_200_OK, response_model=List[StoryDTO])
 async def get(
     session: AsyncSession = Depends(get_session),
     token_data: dict = Depends(check_token),
@@ -37,17 +39,14 @@ async def get(
         List[Story]: A list of Story objects.
     """
     try:
-        logger.debug("Starting transaction...")
-        async with transaction_context(session):
-            profiles_ids = await session.execute(
-                select(Profile.id).where(Profile.user_id == token_data.get("user_id"))
-            )
-            profiles_ids = profiles_ids.scalars().all()
+        profiles_ids = await session.execute(
+            select(Profile.id).where(Profile.user_id == token_data.get("user_id"))
+        )
+        profiles_ids = profiles_ids.scalars().all()
 
-            stories = await session.execute(
-                select(Story).filter(Story.profile_id.in_(profiles_ids))
-            )
-        logger.debug("Transaction committed.")
+        stories = await session.execute(
+            select(Story).filter(Story.profile_id.in_(profiles_ids))
+        )
 
         return stories.scalars().all()
     except SQLAlchemyError as e:
@@ -55,7 +54,7 @@ async def get(
         raise HTTPException(status_code=500, detail="Failed to fetch stories")
 
 
-@story_router.get("/{id}", status_code=status.HTTP_200_OK)
+@story_router.get("/{id}", status_code=status.HTTP_200_OK, response_model=StoryDTO)
 async def get_by_id(
     id: int,
     session: AsyncSession = Depends(get_session),
