@@ -20,11 +20,11 @@ class LoggerService:
 
         self.logger.addHandler(handler)
 
-    def info(self, module, message):
+    def info(self, message, module = "UndefinedModule"):
         self.logger.info(f"{module} | {message}")
 
-    def warning(self, module, message):
+    def warning(self, message, module = "UndefinedModule"):
         self.logger.warning(f"{module} | {message}")
 
-    def error(self, module, message):
+    def error(self, message, module = "UndefinedModule"):
         self.logger.error(f"{module} | {message}")
