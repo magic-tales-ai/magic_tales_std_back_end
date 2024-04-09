@@ -22,14 +22,6 @@ from controllers.user_controller import user_router
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Include routers
 app.include_router(session_router)
 app.include_router(profile_router)
@@ -49,6 +41,13 @@ EXCLUDED_PATHS = [
 app.add_middleware(AddJWTToResponseMiddleware, excluded_paths=EXCLUDED_PATHS)
 app.add_middleware(ErrorHandlerMiddleware)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 static_folder = os.getenv("STATIC_FOLDER")
 app.mount(static_folder, StaticFiles(directory=static_folder), name="static")
