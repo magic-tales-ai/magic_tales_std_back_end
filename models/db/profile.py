@@ -12,3 +12,6 @@ class Profile(Base):
     user_id = Column(ForeignKey("users.id"))
     user = relationship("User", lazy="joined")
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
+    
+    # This field is ONLY for mapping to the DTO model. If this field doesn't exist here, the automatic mapping doesn't work.
+    image = None

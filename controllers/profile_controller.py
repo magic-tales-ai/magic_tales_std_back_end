@@ -12,6 +12,7 @@ from models.dto.profile import Profile as ProfileDTO
 from models.api.profile_api import ProfileAPI
 import logging
 import os
+import base64
 
 from utils.log_utils import get_logger
 
@@ -45,6 +46,17 @@ async def get(
         profiles = result.scalars().all()
         if not profiles:
             logger.info(f"No profiles found for user ID: {token_data.get('user_id')}")
+            
+        # Set Profiles IMAGES
+        profiles_folder = os.getenv("STATIC_FOLDER") + "/profiles"
+        for profile in profiles:
+            image_path = os.path.join(profiles_folder, str(profile.id) + ".png")
+            if not os.path.exists(image_path):
+                profile.image = None
+            else:
+                with open(image_path, "rb") as img_file:
+                    profile.image = base64.b64encode(img_file.read()).decode("utf-8")
+            
         return profiles
     except SQLAlchemyError as e:
         logger.error(f"Failed to fetch profiles: {e}")
@@ -73,6 +85,16 @@ async def get_by_id(
         if result is None:
             logger.info(f"Profile with ID: {id} not found")
             raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Set Profile IMAGE
+        profiles_folder = os.getenv("STATIC_FOLDER") + "/profiles"
+        image_path = os.path.join(profiles_folder, str(result.id) + ".png")
+        if not os.path.exists(image_path):
+            result.image = None
+        else:
+            with open(image_path, "rb") as img_file:
+                result.image = base64.b64encode(img_file.read()).decode("utf-8")
+                    
         return result
     except SQLAlchemyError as e:
         logger.error(f"Failed to fetch profile by ID: {e}")
@@ -119,7 +141,10 @@ async def upload_image_by_profile_id(
         with open(os.path.join(profiles_folder, str(id) + ".png"), "wb") as buffer:
             buffer.write(image.file.read())
             
-        return {"message": "Image upload successfully"}
+        with open(os.path.join(profiles_folder, str(id) + ".png"), "rb") as img_file:
+            b64result = base64.b64encode(img_file.read()).decode("utf-8")
+            
+        return {"image": b64result}
     except SQLAlchemyError as e:
         logger.error(f"Failed to upload image: {e}")
         # Rollback is handled automatically if an exception occurs within the with block
