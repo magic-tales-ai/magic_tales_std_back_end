@@ -5,6 +5,8 @@ from models.dto.plan import Plan
 
 class User(BaseModel):
     id: int
+    name: str
+    last_name: str
     username: str
     email: str
     plan_id: int

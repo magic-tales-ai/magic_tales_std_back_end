@@ -8,9 +8,14 @@ from datetime import datetime
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
+    name = Column(String(255)) # TODO: This will need to change when first version will launch. The field isn't Nullable
+    last_name = Column(String(255))# TODO: This will need to change when first version will launch. The field isn't Nullable
     username = Column(String(255), nullable=False, unique=True)
     email = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
+    new_email = Column(String(255))
+    new_password = Column(String(255))
+    validation_code = Column(Integer)
     plan_id = Column(ForeignKey("plans.id"))
     plan = relationship("Plan", lazy="joined")
     assistant_id = Column(String(255), nullable=True)

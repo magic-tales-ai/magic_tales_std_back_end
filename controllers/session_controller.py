@@ -69,6 +69,8 @@ async def login(
 
     response = UserAPI(
         id=user.id,
+        name=user.name,
+        last_name=user.last_name,
         username=user.username,
         email=user.email,
         token=f"Bearer {access_token}",
@@ -79,6 +81,8 @@ async def login(
 
 @session_router.post("/register", status_code=status.HTTP_200_OK)
 async def register(
+    name: Annotated[str, Form()],
+    last_name: Annotated[str, Form()],
     email: Annotated[str, Form()],
     username: Annotated[str, Form()],
     password: Annotated[str, Form()],
@@ -109,6 +113,8 @@ async def register(
             hashed_password = await hash_password_async(password)
 
             new_user = User(
+                name=name,
+                last_name=last_name,
                 username=username,
                 email=email,
                 password=hashed_password,
@@ -124,7 +130,7 @@ async def register(
         logger.info(f"Registered new user: {username}")
 
         return RegisterAPI(
-            id=new_user.id, username=new_user.username, email=new_user.email
+            id=new_user.id, name=new_user.name, last_name=new_user.last_name, username=new_user.username, email=new_user.email
         )
 
     except Exception as e:

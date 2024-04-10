@@ -1,4 +1,5 @@
-from fastapi import APIRouter, status, Depends, HTTPException
+from typing import Annotated, Optional
+from fastapi import APIRouter, File, Form, UploadFile, status, Depends, HTTPException
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,12 +7,15 @@ from sqlalchemy import func
 
 from db import get_session, transaction_context
 from services.session_service import check_token
+from services.email_service import send_email
 from models.db.story import Story
 from models.db.profile import Profile
 from models.db.user import User
 from models.db.plan import Plan
 from datetime import datetime
 import logging
+import os
+import random
 
 from utils.log_utils import get_logger
 
@@ -99,3 +103,118 @@ async def change_user_plan(
         await session.rollback()
         logger.error(f"Failed to change user plan: {e}")
         raise HTTPException(status_code=500, detail="Failed to change plan")
+
+@user_router.post("/update", status_code=status.HTTP_200_OK)
+async def update_user(
+    name: str = Form(None),
+    last_name: str = Form(None),
+    email: str = Form(None),
+    username: str = Form(None),
+    image: UploadFile = File(None),
+    session: AsyncSession = Depends(get_session),
+    token_data: dict = Depends(check_token)
+):
+    """
+    Asynchronusly update user data (name, last_name, email, username, image)
+
+    Args:
+        email (str, optional): The new email to assign to the user.
+        username (str, optional): The new username to assign to the user.
+        image (UploadFile, optional): The image to upload.
+        session (AsyncSession): The database session for executing queries.
+        token_data (dict): The user token data, including user ID.
+
+    Returns:
+        bool: True if the data (name, last_name, email, username, image) was change successfully.
+    """
+    try:
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
+            user = await session.get(User, token_data.get("user_id"))
+            
+            if not user:
+                logger.error(f"User {token_data.get('user_id')} not found")
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            if name is not None and name != user.name:
+                user.name = name
+                
+            if last_name is not None and last_name != user.last_name:
+                user.last_name = last_name
+            
+            if email is not None and email != user.email:
+                exist_email = await session.execute(
+                    select(User).where(User.email == email).where(User.id != user.id)
+                )
+                exist_email = exist_email.scalars().all()
+                
+                if exist_email is not None and len(exist_email) > 0:
+                    raise HTTPException(status_code=404, detail="Email is in use.")
+                
+                # Generate new validation_code
+                user.validation_code = random.randint(100000, 999999)
+                # Send validation_code email to old email
+                send_email(user.email, "Magic Tales - Change email", f"The code for change your email is: {user.validation_code}")
+                
+                user.new_email = email
+                
+            if username is not None and username != user.username:
+                exist_username = await session.execute(
+                    select(User).where(User.username == username).where(User.id != user.id)
+                )
+                exist_username = exist_username.scalars().all()
+                
+                if exist_username is not None and len(exist_username) > 0:
+                    raise HTTPException(status_code=404, detail="Username is in use.")
+                
+                user.username = username
+                
+            if image is not None:
+                users_folder = os.getenv("STATIC_FOLDER") + "/users"
+                allowed_extensions = { '.jpg', '.jpeg', 'png' }
+                filename, ext = os.path.splitext(image.filename)
+                
+                if ext.lower() not in allowed_extensions:
+                    raise HTTPException(status_code=400, detail="File must be .jpg, .jpeg or .png")
+                
+                if not os.path.exists(users_folder):
+                    os.makedirs(users_folder)
+                    
+                with open(os.path.join(users_folder, str(user.id) + ".png"), "wb") as buffer:
+                    buffer.write(image.file.read())
+            # Transaction will be automatically committed here
+        logger.debug("Transaction committed.")
+        return True
+    except SQLAlchemyError as e:
+        await session.rollback()
+        logger.error(f"Failed to update user settings: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update settings")
+    
+@user_router.post("/change-email-validate", status_code=status.HTTP_200_OK)
+async def change_email_validation(
+    validation_code: Annotated[int, Form()],
+    session: AsyncSession = Depends(get_session),
+    token_data: dict = Depends(check_token)
+):
+    try:
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
+            user = await session.get(User, token_data.get("user_id"))
+            if not user:
+                logger.error(f"User {token_data.get('user_id')} not found")
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            if user.validation_code != validation_code:
+                logger.error(f"Validation code {validation_code} is not valid")
+                raise HTTPException(status_code=404, detail="Validation code is not valid")
+            
+            user.email = user.new_email
+            user.new_email = None
+            user.validation_code = None
+            # Transaction will be automatically committed here
+        logger.debug("Transaction committed.")
+        return True
+    except SQLAlchemyError as e:
+        await session.rollback()
+        logger.error(f"Failed to validate user email: {e}")
+        raise HTTPException(status_code=500, detail="Failed to validate email")
