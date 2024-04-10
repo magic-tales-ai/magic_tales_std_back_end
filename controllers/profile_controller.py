@@ -7,6 +7,7 @@ from sqlalchemy.future import select
 
 from db import get_session, transaction_context
 from services.session_service import check_token
+from services.image_service import save_image_as_png, get_image_as_byte_64, get_image_as_file_response
 from models.db.profile import Profile
 from models.dto.profile import Profile as ProfileDTO
 from models.api.profile_api import ProfileAPI
@@ -87,13 +88,7 @@ async def get_by_id(
             raise HTTPException(status_code=404, detail="Profile not found")
         
         # Set Profile IMAGE
-        profiles_folder = os.getenv("STATIC_FOLDER") + "/profiles"
-        image_path = os.path.join(profiles_folder, str(result.id) + ".png")
-        if not os.path.exists(image_path):
-            result.image = None
-        else:
-            with open(image_path, "rb") as img_file:
-                result.image = base64.b64encode(img_file.read()).decode("utf-8")
+        result.image = get_image_as_byte_64("/profiles", result.id)
                     
         return result
     except SQLAlchemyError as e:
@@ -122,7 +117,6 @@ async def upload_image_by_profile_id(
     """
     try:
         profile = await session.get(Profile, id)
-        profiles_folder = os.getenv("STATIC_FOLDER") + "/profiles"
         allowed_extensions = { '.jpg', '.jpeg', 'png' }
         filename, ext = os.path.splitext(image.filename)
         
@@ -133,16 +127,11 @@ async def upload_image_by_profile_id(
             logger.info(f"Profile with ID: {id} not found")
             raise HTTPException(status_code=404, detail="Profile not found")
         
-        # If the folder "static/profiles" doesn't exists, we create
-        if not os.path.exists(profiles_folder):
-            os.makedirs(profiles_folder)
+        # Save image
+        save_image_as_png("/profiles", image, id)
         
-        # Save image (the filename will be the profile id)
-        with open(os.path.join(profiles_folder, str(id) + ".png"), "wb") as buffer:
-            buffer.write(image.file.read())
-            
-        with open(os.path.join(profiles_folder, str(id) + ".png"), "rb") as img_file:
-            b64result = base64.b64encode(img_file.read()).decode("utf-8")
+        # Get image as b64 to return
+        b64result = get_image_as_byte_64("/profiles", id)
             
         return {"image": b64result}
     except SQLAlchemyError as e:
@@ -169,18 +158,15 @@ async def get_image_by_profile_id(
     """
     try:
         profile = await session.get(Profile, id)
-        profiles_folder = os.getenv("STATIC_FOLDER") + "/profiles"
-        
         if profile is None:
             logger.info(f"Profile with ID: {id} not found")
             raise HTTPException(status_code=404, detail="Profile not found")
         
-        image_path = os.path.join(profiles_folder, str(id) + ".png")
-        
-        if not os.path.exists(image_path):
+        image = get_image_as_file_response("/profiles", id)
+        if image is None:
             raise HTTPException(status_code=404, detail="Image not found")
         
-        return FileResponse(image_path)
+        return image
     except SQLAlchemyError as e:
         logger.error(f"Failed to get image: {e}")
         # Rollback is handled automatically if an exception occurs within the with block

@@ -9,3 +9,4 @@ class UserAPI(BaseModel):
     username: str
     email: str
     token: Optional[str] = Field(None)
+    image: Optional[str]

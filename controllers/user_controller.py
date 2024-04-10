@@ -8,6 +8,7 @@ from sqlalchemy import func
 from db import get_session, transaction_context
 from services.session_service import check_token
 from services.email_service import send_email
+from services.image_service import save_image_as_png
 from models.db.story import Story
 from models.db.profile import Profile
 from models.db.user import User
@@ -170,18 +171,13 @@ async def update_user(
                 user.username = username
                 
             if image is not None:
-                users_folder = os.getenv("STATIC_FOLDER") + "/users"
                 allowed_extensions = { '.jpg', '.jpeg', 'png' }
                 filename, ext = os.path.splitext(image.filename)
                 
                 if ext.lower() not in allowed_extensions:
                     raise HTTPException(status_code=400, detail="File must be .jpg, .jpeg or .png")
                 
-                if not os.path.exists(users_folder):
-                    os.makedirs(users_folder)
-                    
-                with open(os.path.join(users_folder, str(user.id) + ".png"), "wb") as buffer:
-                    buffer.write(image.file.read())
+                save_image_as_png("/users", image, user.id)
             # Transaction will be automatically committed here
         logger.debug("Transaction committed.")
         return True

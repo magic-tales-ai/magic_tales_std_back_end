@@ -10,6 +10,7 @@ from services.session_service import (
     hash_password_async,
     verify_password,
 )
+from services.image_service import get_image_as_byte_64
 from models.api.user_api import UserAPI
 from models.api.register_api import RegisterAPI
 from models.db.user import User
@@ -73,6 +74,7 @@ async def login(
         last_name=user.last_name,
         username=user.username,
         email=user.email,
+        image=get_image_as_byte_64("/users", user.id),
         token=f"Bearer {access_token}",
     )
 
