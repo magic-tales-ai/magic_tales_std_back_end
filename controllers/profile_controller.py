@@ -141,7 +141,10 @@ async def upload_image_by_profile_id(
         with open(os.path.join(profiles_folder, str(id) + ".png"), "wb") as buffer:
             buffer.write(image.file.read())
             
-        return {"message": "Image upload successfully"}
+        with open(os.path.join(profiles_folder, str(id) + ".png"), "rb") as img_file:
+            b64result = base64.b64encode(img_file.read()).decode("utf-8")
+            
+        return {"image": b64result}
     except SQLAlchemyError as e:
         logger.error(f"Failed to upload image: {e}")
         # Rollback is handled automatically if an exception occurs within the with block
