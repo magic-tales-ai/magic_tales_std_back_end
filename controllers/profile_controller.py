@@ -1,5 +1,6 @@
 from fastapi import APIRouter, status, Depends, HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
+from typing import List
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -7,6 +8,7 @@ from sqlalchemy.future import select
 from db import get_session, transaction_context
 from services.session_service import check_token
 from models.db.profile import Profile
+from models.dto.profile import Profile as ProfileDTO
 from models.api.profile_api import ProfileAPI
 import logging
 import os
@@ -21,7 +23,7 @@ logger = get_logger(__name__)
 profile_router = APIRouter(prefix="/profile", tags=["Profile"])
 
 
-@profile_router.get("/", status_code=status.HTTP_200_OK)
+@profile_router.get("/", status_code=status.HTTP_200_OK, response_model=List[ProfileDTO])
 async def get(
     session: AsyncSession = Depends(get_session),
     token_data: dict = Depends(check_token),
@@ -49,7 +51,7 @@ async def get(
         raise HTTPException(status_code=500, detail="Database error occurred")
 
 
-@profile_router.get("/{id}", status_code=status.HTTP_200_OK)
+@profile_router.get("/{id}", status_code=status.HTTP_200_OK, response_model=ProfileDTO)
 async def get_by_id(
     id: int,
     session: AsyncSession = Depends(get_session),

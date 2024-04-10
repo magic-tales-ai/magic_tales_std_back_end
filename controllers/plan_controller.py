@@ -1,9 +1,11 @@
+from typing import List
 from fastapi import APIRouter, status, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import select  # Use future select for compatibility with async
 from db import get_session, AsyncSession
 from models.db.plan import Plan
+from models.dto.plan import Plan as PlanDTO
 import logging
 import os
 
@@ -18,7 +20,7 @@ logger = get_logger(__name__)
 plan_router = APIRouter(prefix="/plan", tags=["Plan"])
 
 
-@plan_router.get("/", status_code=status.HTTP_200_OK)
+@plan_router.get("/", status_code=status.HTTP_200_OK, response_model=List[PlanDTO])
 async def get(session: AsyncSession = Depends(get_session)):
     """
     Asynchronously retrieves all plans from the database.
