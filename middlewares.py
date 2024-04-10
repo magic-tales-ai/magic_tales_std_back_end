@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import Request, Response
+from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -22,6 +22,8 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
             return response
+        except HTTPException as e:
+            return JSONResponse(status_code=e.status_code, content={"message": e.detail})
         except Exception as e:
             logger_service.error(f"Unhandled exception for {request.url}: {e}")
             message = str(e.args[0]) if e.args else "Internal server error"
