@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 
 from db import get_session, transaction_context
-from services.session_service import check_token
+from services.session_service import check_token, verify_password_async, hash_password_async
 from services.email_service import send_email
 from services.image_service import save_image_as_png
 from models.db.story import Story
@@ -192,6 +192,17 @@ async def change_email_validation(
     session: AsyncSession = Depends(get_session),
     token_data: dict = Depends(check_token)
 ):
+    """
+    Asynchronusly check validation code to change email. Change the email if the validation code is valid
+
+    Args:
+        validation_code (int): The validation code that the user received by email.
+        session (AsyncSession): The database session for executing queries.
+        token_data (dict): The user token data, including user ID.
+
+    Returns:
+        bool: True if the email was validate successfully.
+    """
     try:
         logger.debug("Starting transaction...")
         async with transaction_context(session):
@@ -214,3 +225,49 @@ async def change_email_validation(
         await session.rollback()
         logger.error(f"Failed to validate user email: {e}")
         raise HTTPException(status_code=500, detail="Failed to validate email")
+    
+@user_router.post("/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+    old_password: Annotated[str, Form()],
+    new_password: Annotated[str, Form()],
+    repeated_new_password: Annotated[str, Form()],
+    session: AsyncSession = Depends(get_session),
+    token_data: dict = Depends(check_token)
+):
+    """
+    Asynchronusly change the user password
+
+    Args:
+        old_password (str): The actual user password
+        new_password (str): The new user password
+        repeated_new_password (str): The repeated new user password for validation
+        session (AsyncSession): The database session for executing queries.
+        token_data (dict): The user token data, including user ID.
+
+    Returns:
+        bool: True if the password was change successfully
+    """
+    try:
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
+            user = await session.get(User, token_data.get("user_id"))
+            if not user:
+                logger.error(f"User {token_data.get('user_id')} not found")
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            if not await verify_password_async(old_password, user.password):
+                logger.error(f"Old password '{old_password}' is not valid")
+                raise HTTPException(status_code=404, detail="Old password is not valid")
+            
+            if new_password != repeated_new_password:
+                logger.error(f"The new_password '{new_password}' and repeated_new_password '{repeated_new_password}' aren't the same")
+                raise HTTPException(status_code=404, detail="The new password and repeated new password must be the same")
+            
+            user.password = await hash_password_async(new_password)
+            # Transaction will be automatically committed here
+        logger.debug("Transaction committed.")
+        return True
+    except SQLAlchemyError as e:
+        await session.rollback()
+        logger.error(f"Failed to change user password: {e}")
+        raise HTTPException(status_code=500, detail="Failed to change password")
