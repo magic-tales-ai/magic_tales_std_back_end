@@ -5,8 +5,8 @@ from models.dto.plan import Plan
 
 class User(BaseModel):
     id: int
-    name: str
-    last_name: str
+    name: Optional[str] # TODO: This will need to change when first version will launch. The field isn't Optional
+    last_name: Optional[str] # TODO: This will need to change when first version will launch. The field isn't Optional
     username: str
     email: str
     plan_id: int
