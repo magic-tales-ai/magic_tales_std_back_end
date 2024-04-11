@@ -7,6 +7,7 @@ from models.dto.profile import Profile
 class Story(BaseModel):
     id: int
     profile_id: int
+    session_id: str
     profile: Profile
     title: str
     features: Optional[str]

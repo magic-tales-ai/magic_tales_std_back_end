@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import get_session, transaction_context
 from services.session_service import check_token
+from services.image_service import get_image_as_byte_64
 from models.db.profile import Profile
 from models.db.story import Story
 from models.dto.story import Story as StoryDTO
@@ -47,8 +48,11 @@ async def get(
         stories = await session.execute(
             select(Story).filter(Story.profile_id.in_(profiles_ids))
         )
+        stories = stories.scalars().all()
+        for story in stories:
+            story.profile.image = get_image_as_byte_64('/profiles', story.profile.id)
 
-        return stories.scalars().all()
+        return stories
     except SQLAlchemyError as e:
         logger.error(f"Failed to fetch stories: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch stories")

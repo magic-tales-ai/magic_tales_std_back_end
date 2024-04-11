@@ -3,7 +3,7 @@ import smtplib
 from email.message import EmailMessage
 from email.utils import formataddr
 
-def send_email(to: str, subject: str, content: str):
+async def send_email(to: str, subject: str, content: str):
     with smtplib.SMTP(os.getenv('MAIL_HOST'), os.getenv('MAIL_PORT')) as server:
         server.starttls()
         server.login(os.getenv('MAIL_USERNAME'), os.getenv('MAIL_PASSWORD'))
