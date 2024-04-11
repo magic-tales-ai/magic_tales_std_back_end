@@ -10,6 +10,7 @@ from services.session_service import (
     hash_password_async,
     verify_password,
 )
+from services.email_service import send_email
 from services.image_service import get_image_as_byte_64
 from models.api.user_api import UserAPI
 from models.api.register_api import RegisterAPI
@@ -17,6 +18,7 @@ from models.db.user import User
 from models.db.plan import Plan
 import re
 import logging
+import random
 
 from utils.log_utils import get_logger
 from db import transaction_context
@@ -62,7 +64,7 @@ async def login(
 
     # Verify user exists and password is correct
     if not user or not verify_password(password, user.password):
-        raise HTTPException(status_code=404, detail="Invalid User or Password")
+        raise HTTPException(status_code=401, detail="Invalid User or Password")
 
     # Prepare and send response
     token_data = {"user_id": user.id, "username": user.username, "email": user.email}
@@ -111,8 +113,19 @@ async def register(
             if not free_plan:
                 logger.error("Free plan doesn't exist")
                 raise HTTPException(status_code=404, detail="Free plan doesn't exist")
+            
+            user = (await session.execute(select(User).where(User.username == username))).scalar_one_or_none()
+            if user:
+                logger.error("The username already exists")
+                raise HTTPException(status_code=422, detail="The username already exists")
+
+            user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+            if user:
+                logger.error("The email already exists")
+                raise HTTPException(status_code=422, detail="The email already exists")
 
             hashed_password = await hash_password_async(password)
+            validation_code = random.randint(100000, 999999) # Generate validation_code
 
             new_user = User(
                 name=name,
@@ -120,8 +133,12 @@ async def register(
                 username=username,
                 email=email,
                 password=hashed_password,
+                validation_code=validation_code,
                 plan_id=free_plan.id,
             )
+            
+            # Send validation_code email
+            await send_email(new_user.email, "Magic Tales - Validate email", f"The code to activate your email is: {new_user.validation_code}")
 
             session.add(new_user)
             # The transaction will be committed at the end of the async with block
@@ -135,10 +152,49 @@ async def register(
             id=new_user.id, name=new_user.name, last_name=new_user.last_name, username=new_user.username, email=new_user.email
         )
 
-    except Exception as e:
+    except SQLAlchemyError as e:
         logger.error(f"Failed to register user: {e}")
-        await session.rollback()  # Explicit rollback in case of error
         raise HTTPException(status_code=500, detail="Failed to register user")
+    
+@session_router.post("/register-validate", status_code=status.HTTP_200_OK)
+async def register_validation(
+    email: Annotated[str, Form()],
+    validation_code: Annotated[int, Form()],
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Validate user's register code
+
+    Args:
+        email (Annotated[str, Form): The email of the user to validate.
+        validation_code (Annotated[int, Form): The validation code of the user.
+        session (AsyncSession): Injected database session for executing asynchronous database operations.
+
+    Returns:
+        bool: True if the email was validate successfully.
+    """
+    try:
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
+            user = (await session.execute(select (User).where(User.email==email))).scalar_one_or_none()
+            
+            if not user:
+                logger.error(f"User {email} not found")
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            if user.validation_code != validation_code:
+                logger.error(f"Validation code {validation_code} is not valid")
+                raise HTTPException(status_code=422, detail="Validation code is not valid")
+            
+            user.active = 1
+            user.validation_code = None
+            # Transaction will be automatically committed here
+        logger.debug("Transaction committed.")
+        return True
+    except SQLAlchemyError as e:
+        await session.rollback()
+        logger.error(f"Failed to validate user email: {e}")
+        raise HTTPException(status_code=500, detail="Failed to validate email")
 
 
 @session_router.post("/login-swagger", status_code=status.HTTP_200_OK)

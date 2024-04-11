@@ -1,5 +1,5 @@
 from db import Base
-from sqlalchemy import Column, Integer, String, TIMESTAMP
+from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -16,6 +16,7 @@ class User(Base):
     new_email = Column(String(255))
     new_password = Column(String(255))
     validation_code = Column(Integer)
+    active = Column(Boolean, nullable=False, default=0)
     plan_id = Column(ForeignKey("plans.id"))
     plan = relationship("Plan", lazy="joined")
     assistant_id = Column(String(255), nullable=True)

@@ -8,6 +8,7 @@ class Story(Base):
     __tablename__ = "stories"
     id = Column(Integer, primary_key=True)
     profile_id = Column(ForeignKey("profiles.id"))
+    session_id = Column(Text)
     profile = relationship("Profile", lazy="joined")
     title = Column(Text)
     features = Column(Text)

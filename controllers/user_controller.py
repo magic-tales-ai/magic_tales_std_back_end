@@ -150,12 +150,12 @@ async def update_user(
                 exist_email = exist_email.scalars().all()
                 
                 if exist_email is not None and len(exist_email) > 0:
-                    raise HTTPException(status_code=404, detail="Email is in use.")
+                    raise HTTPException(status_code=422, detail="Email is in use.")
                 
                 # Generate new validation_code
                 user.validation_code = random.randint(100000, 999999)
                 # Send validation_code email to old email
-                send_email(user.email, "Magic Tales - Change email", f"The code for change your email is: {user.validation_code}")
+                await send_email(user.email, "Magic Tales - Change email", f"The code to change your email is: {user.validation_code}")
                 
                 user.new_email = email
                 
@@ -166,7 +166,7 @@ async def update_user(
                 exist_username = exist_username.scalars().all()
                 
                 if exist_username is not None and len(exist_username) > 0:
-                    raise HTTPException(status_code=404, detail="Username is in use.")
+                    raise HTTPException(status_code=422, detail="Username is in use.")
                 
                 user.username = username
                 
@@ -202,7 +202,7 @@ async def change_email_validation(
             
             if user.validation_code != validation_code:
                 logger.error(f"Validation code {validation_code} is not valid")
-                raise HTTPException(status_code=404, detail="Validation code is not valid")
+                raise HTTPException(status_code=422, detail="Validation code is not valid")
             
             user.email = user.new_email
             user.new_email = None
