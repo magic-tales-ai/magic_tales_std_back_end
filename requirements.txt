@@ -6,4 +6,5 @@ pip install pyjwt
 pip install marshmallow
 pip install aiomysql
 pip install bcrypt
+pip install aiosmtplib
 

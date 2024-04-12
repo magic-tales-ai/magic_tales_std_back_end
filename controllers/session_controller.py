@@ -59,7 +59,7 @@ async def login(
         query = select(User).where(User.username == user)
 
     # Execute query
-    result = await session.execute(query)
+    result = await session.execute(query.where(User.active == 1))
     user = result.scalars().first()
 
     # Verify user exists and password is correct
@@ -265,14 +265,12 @@ async def recover_password(
 
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
+            
+            user.validation_code = random.randint(100000, 999999) # Generate validation_code
+            await send_email(user.email, "Magic Tales - Password recovery", f"The code to recover your password is: {user.validation_code}")
 
         logger.debug("Transaction committed.")
 
-        # TODO: The actual sending of a recovery email should be implemented here.
-        # It's assumed to be an asynchronous operation.
-        # E.g., await send_recovery_email(user.email)
-        # This placeholder indicates success for demonstration purposes.
-        # Asynchronous Email Sending: For the password recovery functionality, let's consider using a dedicated asynchronous task queue (e.g., Celery with an asyncio-compatible broker) for sending emails. This approach decouples email sending from request processing, improving scalability and fault tolerance.
         return {"status": "success", "message": "Recovery email sent."}
     except SQLAlchemyError as e:
         logger.error(f"Database error during password recovery: {e}")
@@ -285,3 +283,51 @@ async def recover_password(
         raise HTTPException(
             status_code=500, detail=f"Failed to initiate password recovery: {str(e)}"
         )
+
+@session_router.post("/recover-password-validate", status_code=status.HTTP_200_OK)
+async def recover_password_validation(
+    email: Annotated[str, Form()],
+    new_password: Annotated[str, Form()],
+    repeated_new_password: Annotated[str, Form()],
+    validation_code: Annotated[int, Form()],
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Validate user's register code
+
+    Args:
+        email (Annotated[str, Form): The email of the user to validate.
+        new_password (str): The new user password
+        repeated_new_password (str): The repeated new user password for validation
+        validation_code (Annotated[int, Form): The validation code of the user.
+        session (AsyncSession): Injected database session for executing asynchronous database operations.
+
+    Returns:
+        bool: True if the email was validate successfully.
+    """
+    try:
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
+            user = (await session.execute(select (User).where(User.email==email))).scalar_one_or_none()
+            
+            if not user:
+                logger.error(f"User {email} not found")
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            if user.validation_code != validation_code:
+                logger.error(f"Validation code {validation_code} is not valid")
+                raise HTTPException(status_code=422, detail="Validation code is not valid")
+            
+            if new_password != repeated_new_password:
+                logger.error(f"The new_password '{new_password}' and repeated_new_password '{repeated_new_password}' aren't the same")
+                raise HTTPException(status_code=422, detail="The new password and repeated new password must be the same")
+            
+            user.password = await hash_password_async(new_password)
+            user.validation_code = None
+            # Transaction will be automatically committed here
+        logger.debug("Transaction committed.")
+        return True
+    except SQLAlchemyError as e:
+        await session.rollback()
+        logger.error(f"Failed to validate user email: {e}")
+        raise HTTPException(status_code=500, detail="Failed to validate email")
