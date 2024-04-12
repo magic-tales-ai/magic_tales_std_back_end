@@ -12,6 +12,7 @@ from services.session_service import (
 )
 from services.email_service import send_email
 from services.image_service import get_image_as_byte_64
+from services.user_service import check_validation_code
 from models.api.user_api import UserAPI
 from models.api.register_api import RegisterAPI
 from models.db.user import User
@@ -59,12 +60,16 @@ async def login(
         query = select(User).where(User.username == user)
 
     # Execute query
-    result = await session.execute(query.where(User.active == 1))
+    result = await session.execute(query)
     user = result.scalars().first()
 
     # Verify user exists and password is correct
     if not user or not verify_password(password, user.password):
         raise HTTPException(status_code=401, detail="Invalid User or Password")
+    
+    # Verify if user is active
+    if not user.active:
+        raise HTTPException(status_code=401, detail="User is not active")
 
     # Prepare and send response
     token_data = {"user_id": user.id, "username": user.username, "email": user.email}
@@ -138,7 +143,7 @@ async def register(
             )
             
             # Send validation_code email
-            await send_email(new_user.email, "Magic Tales - Validate email", f"The code to activate your email is: {new_user.validation_code}")
+            await send_email(new_user.email, "Magic Tales - Validate email", f"The validation code is: {new_user.validation_code}")
 
             session.add(new_user)
             # The transaction will be committed at the end of the async with block
@@ -182,8 +187,7 @@ async def register_validation(
                 logger.error(f"User {email} not found")
                 raise HTTPException(status_code=404, detail="User not found")
             
-            if user.validation_code != validation_code:
-                logger.error(f"Validation code {validation_code} is not valid")
+            if not check_validation_code(validation_code, user.validation_code):
                 raise HTTPException(status_code=422, detail="Validation code is not valid")
             
             user.active = 1
@@ -267,7 +271,7 @@ async def recover_password(
                 raise HTTPException(status_code=404, detail="User not found")
             
             user.validation_code = random.randint(100000, 999999) # Generate validation_code
-            await send_email(user.email, "Magic Tales - Password recovery", f"The code to recover your password is: {user.validation_code}")
+            await send_email(user.email, "Magic Tales - Password recovery", f"The validation code is: {user.validation_code}")
 
         logger.debug("Transaction committed.")
 
@@ -314,8 +318,7 @@ async def recover_password_validation(
                 logger.error(f"User {email} not found")
                 raise HTTPException(status_code=404, detail="User not found")
             
-            if user.validation_code != validation_code:
-                logger.error(f"Validation code {validation_code} is not valid")
+            if not check_validation_code(validation_code, user.validation_code):
                 raise HTTPException(status_code=422, detail="Validation code is not valid")
             
             if new_password != repeated_new_password:

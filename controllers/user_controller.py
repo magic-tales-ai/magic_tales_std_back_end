@@ -9,6 +9,7 @@ from db import get_session, transaction_context
 from services.session_service import check_token, verify_password_async, hash_password_async
 from services.email_service import send_email
 from services.image_service import save_image_as_png
+from services.user_service import check_validation_code
 from models.db.story import Story
 from models.db.profile import Profile
 from models.db.user import User
@@ -155,7 +156,7 @@ async def update_user(
                 # Generate new validation_code
                 user.validation_code = random.randint(100000, 999999)
                 # Send validation_code email to old email
-                await send_email(user.email, "Magic Tales - Change email", f"The code to change your email is: {user.validation_code}")
+                await send_email(user.email, "Magic Tales - Change email", f"The validation code is: {user.validation_code}")
                 
                 user.new_email = email
                 
@@ -211,8 +212,7 @@ async def change_email_validation(
                 logger.error(f"User {token_data.get('user_id')} not found")
                 raise HTTPException(status_code=404, detail="User not found")
             
-            if user.validation_code != validation_code:
-                logger.error(f"Validation code {validation_code} is not valid")
+            if not check_validation_code(validation_code, user.validation_code):
                 raise HTTPException(status_code=422, detail="Validation code is not valid")
             
             user.email = user.new_email
@@ -257,13 +257,49 @@ async def change_password(
             
             if not await verify_password_async(old_password, user.password):
                 logger.error(f"Old password '{old_password}' is not valid")
-                raise HTTPException(status_code=404, detail="Old password is not valid")
+                raise HTTPException(status_code=422, detail="Old password is not valid")
             
             if new_password != repeated_new_password:
                 logger.error(f"The new_password '{new_password}' and repeated_new_password '{repeated_new_password}' aren't the same")
-                raise HTTPException(status_code=404, detail="The new password and repeated new password must be the same")
+                raise HTTPException(status_code=422, detail="The new password and repeated new password must be the same")
             
             user.password = await hash_password_async(new_password)
+            # Transaction will be automatically committed here
+        logger.debug("Transaction committed.")
+        return True
+    except SQLAlchemyError as e:
+        await session.rollback()
+        logger.error(f"Failed to change user password: {e}")
+        raise HTTPException(status_code=500, detail="Failed to change password")
+    
+@user_router.post("/resend-validation-code", status_code=status.HTTP_200_OK)
+async def resend_validation_code(
+    email: Annotated[str, Form()],
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Asynchronusly resend the validation code to the user email
+
+    Args:
+        email (str): The email to send the new validation code
+        session (AsyncSession): The database session for executing queries.
+
+    Returns:
+        bool: True if the email was send successfully
+    """
+    try:
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
+            user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+            if not user:
+                logger.error(f"User {email} not found")
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            # Generate new validation_code
+            user.validation_code = random.randint(100000, 999999)
+            # Send validation_code email to old email
+            await send_email(user.email, "Magic Tales - New validation code", f"The validation code is: {user.validation_code}")
+        
             # Transaction will be automatically committed here
         logger.debug("Transaction committed.")
         return True
