@@ -21,6 +21,9 @@ class User(Base):
     plan = relationship("Plan", lazy="joined")
     assistant_id = Column(String(255), nullable=True)
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
+    
+    # This field is ONLY for mapping to the DTO model. If this field doesn't exist here, the automatic mapping doesn't work.
+    image = None
 
     def __str__(self):
         return f"User info: username='{self.username}', email='{self.email}', created_at='{self.created_at}')"
