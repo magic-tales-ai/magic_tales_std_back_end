@@ -82,7 +82,7 @@ async def login(
         username=user.username,
         email=user.email,
         image=get_image_as_byte_64("/users", user.id),
-        token=f"Bearer {access_token}",
+        token=access_token,
     )
 
     return response
