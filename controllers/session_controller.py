@@ -71,7 +71,7 @@ async def login(
         id=user.id,
         username=user.username,
         email=user.email,
-        token=f"Bearer {access_token}",
+        token=access_token,
     )
 
     return response
