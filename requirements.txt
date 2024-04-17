@@ -1,10 +1,11 @@
-pip install uvicorn
-pip install fastapi
-pip install python-dotenv
-pip install mysqlclient # Driver MySQL
-pip install pyjwt
-pip install marshmallow
-pip install aiomysql
-pip install bcrypt
-pip install aiosmtplib
-
+uvicorn
+fastapi
+python-dotenv
+pyjwt
+marshmallow
+aiomysql
+bcrypt
+aiosmtplib
+sqlalchemy
+colorlog
+python-multipart
