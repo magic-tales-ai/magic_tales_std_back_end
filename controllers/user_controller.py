@@ -192,7 +192,7 @@ async def update_user(
         logger.error(f"Failed to update user settings: {e}")
         raise HTTPException(status_code=500, detail="Failed to update settings")
     
-@user_router.post("/change-email-validate", status_code=status.HTTP_200_OK)
+@user_router.post("/change-email-validate", status_code=status.HTTP_200_OK, response_model=UserDTO)
 async def change_email_validation(
     validation_code: Annotated[int, Form()],
     session: AsyncSession = Depends(get_session),
@@ -225,7 +225,11 @@ async def change_email_validation(
             user.validation_code = None
             # Transaction will be automatically committed here
         logger.debug("Transaction committed.")
-        return True
+        
+        response_model = await session.get(User, token_data.get("user_id"))
+        response_model.image = get_image_as_byte_64("/users", response_model.id)
+        
+        return response_model
     except SQLAlchemyError as e:
         await session.rollback()
         logger.error(f"Failed to validate user email: {e}")
