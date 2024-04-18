@@ -8,12 +8,13 @@ from sqlalchemy import func
 from db import get_session, transaction_context
 from services.session_service import check_token, verify_password_async, hash_password_async
 from services.email_service import send_email
-from services.image_service import save_image_as_png
+from services.image_service import save_image_as_png, get_image_as_byte_64
 from services.user_service import check_validation_code
 from models.db.story import Story
 from models.db.profile import Profile
 from models.db.user import User
 from models.db.plan import Plan
+from models.dto.user import User as UserDTO
 from datetime import datetime
 import logging
 import os
@@ -106,7 +107,7 @@ async def change_user_plan(
         logger.error(f"Failed to change user plan: {e}")
         raise HTTPException(status_code=500, detail="Failed to change plan")
 
-@user_router.post("/update", status_code=status.HTTP_200_OK)
+@user_router.post("/update", status_code=status.HTTP_200_OK, response_model=UserDTO)
 async def update_user(
     name: str = Form(None),
     last_name: str = Form(None),
@@ -127,7 +128,7 @@ async def update_user(
         token_data (dict): The user token data, including user ID.
 
     Returns:
-        bool: True if the data (name, last_name, email, username, image) was change successfully.
+        UserDTO: The user object as DTO with updated fields
     """
     try:
         logger.debug("Starting transaction...")
@@ -181,7 +182,11 @@ async def update_user(
                 save_image_as_png("/users", image, user.id)
             # Transaction will be automatically committed here
         logger.debug("Transaction committed.")
-        return True
+        
+        response_model = await session.get(User, token_data.get("user_id"))
+        response_model.image = get_image_as_byte_64("/users", response_model.id)
+        
+        return response_model
     except SQLAlchemyError as e:
         await session.rollback()
         logger.error(f"Failed to update user settings: {e}")

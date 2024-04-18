@@ -7,6 +7,7 @@ class User(BaseModel):
     id: int
     name: Optional[str] # TODO: This will need to change when first version will launch. The field isn't Optional
     last_name: Optional[str] # TODO: This will need to change when first version will launch. The field isn't Optional
+    image: Optional[str]
     username: str
     email: str
     active: bool
