@@ -216,8 +216,8 @@ async def change_email_validation(
             if not user:
                 logger.error(f"User {token_data.get('user_id')} not found")
                 raise HTTPException(status_code=404, detail="User not found")
-            
-            if not check_validation_code(validation_code, user.validation_code):
+        
+            if not await check_validation_code(validation_code, user.validation_code):
                 raise HTTPException(status_code=422, detail="Validation code is not valid")
             
             user.email = user.new_email
