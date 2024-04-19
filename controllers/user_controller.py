@@ -173,7 +173,7 @@ async def update_user(
                 user.username = username
                 
             if image is not None:
-                allowed_extensions = { '.jpg', '.jpeg', 'png' }
+                allowed_extensions = { '.jpg', '.jpeg', '.png' }
                 filename, ext = os.path.splitext(image.filename)
                 
                 if ext.lower() not in allowed_extensions:
@@ -217,7 +217,7 @@ async def change_email_validation(
                 logger.error(f"User {token_data.get('user_id')} not found")
                 raise HTTPException(status_code=404, detail="User not found")
         
-            if not await check_validation_code(validation_code, user.validation_code):
+            if not check_validation_code(validation_code, user.validation_code):
                 raise HTTPException(status_code=422, detail="Validation code is not valid")
             
             user.email = user.new_email

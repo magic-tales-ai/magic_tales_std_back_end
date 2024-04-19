@@ -6,9 +6,9 @@ logging.basicConfig(level=logging.INFO)
 # Get a logger instance for this module
 logger = get_logger(__name__)
 
-async def check_validation_code(validation_code: int, user_validation_code: int):
+def check_validation_code(validation_code: int, user_validation_code: int):
     """
-    Asynchronusly check the validation code
+    Check the validation code
 
     Args:
         validation_code (int): Validation code to check
