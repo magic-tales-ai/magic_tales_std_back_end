@@ -117,7 +117,7 @@ async def upload_image_by_profile_id(
     """
     try:
         profile = await session.get(Profile, id)
-        allowed_extensions = { '.jpg', '.jpeg', 'png' }
+        allowed_extensions = { '.jpg', '.jpeg', '.png' }
         filename, ext = os.path.splitext(image.filename)
         
         if ext.lower() not in allowed_extensions:

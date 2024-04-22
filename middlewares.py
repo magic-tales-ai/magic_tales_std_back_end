@@ -70,7 +70,4 @@ async def validation_exception_handler(
         JSONResponse: A standardized error response indicating the validation failure.
     """
     logger_service.error(f"Validation error for {request.url}: {exc}")
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors()},
-    )
+    return JSONResponse(status_code=422, content={"detail": "Input type validation error"})
