@@ -1,8 +1,10 @@
+import datetime
 from db import Base
 from sqlalchemy import Column, Integer, Text, TIMESTAMP
 from sqlalchemy.sql.schema import ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from marshmallow import Schema, fields
+from marshmallow.fields import Nested
 
 
 class Profile(Base):
@@ -11,7 +13,13 @@ class Profile(Base):
     details = Column(Text)
     user_id = Column(ForeignKey("users.id"))
     user = relationship("User", lazy="joined")
-    created_at = Column(TIMESTAMP, default=datetime.utcnow)
-    
-    # This field is ONLY for mapping to the DTO model. If this field doesn't exist here, the automatic mapping doesn't work.
-    image = None
+    created_at = Column(TIMESTAMP, default=datetime.datetime.now(datetime.UTC))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "details": self.details,
+            "user_id": self.user_id,
+            "user": self.user.to_dict(),
+            "created_at": self.created_at,
+        }
