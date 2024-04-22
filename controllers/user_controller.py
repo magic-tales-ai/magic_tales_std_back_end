@@ -9,7 +9,8 @@ from db import get_session, transaction_context
 from services.session_service import check_token, verify_password_async, hash_password_async
 from services.email_service import send_email
 from services.image_service import save_image_as_png, get_image_as_byte_64
-from services.user_service import check_validation_code
+from services.user_service import check_validation_code, generate_random_string
+from services.session_service import create_access_token
 from models.db.story import Story
 from models.db.profile import Profile
 from models.db.user import User
@@ -316,3 +317,40 @@ async def resend_validation_code(
         await session.rollback()
         logger.error(f"Failed to change user password: {e}")
         raise HTTPException(status_code=500, detail="Failed to change password")
+    
+@user_router.post("/try-mode", status_code=status.HTTP_200_OK)
+async def create_user_try_mode(session: AsyncSession = Depends(get_session)):
+    """
+    Asynchronusly create a temporary user for try_mode
+
+    Args:
+        session (AsyncSession): The database session for executing queries.
+
+    Returns:
+        dict: The internal login token for the temp user and the temp user id
+    """
+    try:
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
+            free_plan = (await session.execute(select(Plan).where(Plan.name == "Free Plan"))).scalars().first()
+            
+            user = User()
+            user.email = generate_random_string()
+            user.username = generate_random_string()
+            user.password = generate_random_string()
+            user.plan_id = free_plan.id
+            user.try_mode = 1
+            
+            session.add(user)
+            # Transaction will be automatically committed here
+        logger.debug("Transaction commited.")
+        
+        await session.refresh(user)
+        token_data = { "user_id": user.id, "username": user.username, "email": user.email }
+        access_token = create_access_token(token_data)
+
+        return { "user_id": user.id, "token": access_token }
+    except SQLAlchemyError as e:
+        await session.rollback()
+        logger.error(f"Failed to create try mode user: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create try mode user")

@@ -20,6 +20,7 @@ class User(Base):
     plan_id = Column(ForeignKey("plans.id"))
     plan = relationship("Plan", lazy="joined")
     assistant_id = Column(String(255), nullable=True)
+    try_mode = Column(Boolean, default=0)
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
     
     # This field is ONLY for mapping to the DTO model. If this field doesn't exist here, the automatic mapping doesn't work.

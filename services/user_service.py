@@ -1,4 +1,5 @@
 import logging
+import uuid
 from utils.log_utils import get_logger
 
 # Set up logging
@@ -22,3 +23,9 @@ def check_validation_code(validation_code: int, user_validation_code: int):
         return False
     
     return True
+
+def generate_random_string():
+    random_string = str(uuid.uuid4())
+    random_string = random_string.lower()
+    random_string = random_string.replace("-", "")
+    return random_string[0:6] + "_TMP"
