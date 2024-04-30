@@ -6,6 +6,7 @@ from sqlalchemy.future import select  # Use future select for compatibility with
 from db import get_session, AsyncSession
 from models.db.plan import Plan
 from models.dto.plan import Plan as PlanDTO
+from services.image_service import get_image_as_byte_64
 import logging
 import os
 
@@ -41,6 +42,10 @@ async def get(session: AsyncSession = Depends(get_session)):
             # If no plans are found, log the event and raise a 404 HTTPException
             logger.info("No plans found in the database.")
             raise HTTPException(status_code=404, detail="No plans found")
+        
+        for plan in plans:
+            plan.image = get_image_as_byte_64("/plans", plan.id)
+            
         return plans
     except SQLAlchemyError as e:
         # Log the specific database error and raise a 500 HTTPException

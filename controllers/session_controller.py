@@ -1,5 +1,5 @@
 from fastapi import APIRouter, status, Depends, HTTPException, Form
-from typing import Annotated
+from typing import Annotated, Optional
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -95,10 +95,11 @@ async def register(
     email: Annotated[str, Form()],
     username: Annotated[str, Form()],
     password: Annotated[str, Form()],
+    try_mode_user_id: int = Form(None),
     session: AsyncSession = Depends(get_session),
 ):
     """
-    Asynchronously registers a new user with proper transaction management.
+    Asynchronously registers a new user (or update a try_mode user) with proper transaction management.
 
     Args:
         email (str): The email of the user to register.
@@ -112,40 +113,56 @@ async def register(
     try:
         logger.debug("Starting transaction...")
         async with transaction_context(session):
-            result = await session.execute(select(Plan).where(Plan.name == "Free Plan"))
-            free_plan = result.scalars().first()
+                result = await session.execute(select(Plan).where(Plan.name == "Free Plan"))
+                free_plan = result.scalars().first()
 
-            if not free_plan:
-                logger.error("Free plan doesn't exist")
-                raise HTTPException(status_code=404, detail="Free plan doesn't exist")
-            
-            user = (await session.execute(select(User).where(User.username == username))).scalar_one_or_none()
-            if user:
-                logger.error("The username already exists")
-                raise HTTPException(status_code=422, detail="The username already exists")
+                if not free_plan:
+                    logger.error("Free plan doesn't exist")
+                    raise HTTPException(status_code=404, detail="Free plan doesn't exist")
+                
+                user = (await session.execute(select(User).where(User.username == username))).scalar_one_or_none()
+                if user:
+                    logger.error("The username already exists")
+                    raise HTTPException(status_code=422, detail="The username already exists")
 
-            user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
-            if user:
-                logger.error("The email already exists")
-                raise HTTPException(status_code=422, detail="The email already exists")
+                user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+                if user:
+                    logger.error("The email already exists")
+                    raise HTTPException(status_code=422, detail="The email already exists")
 
-            hashed_password = await hash_password_async(password)
-            validation_code = random.randint(100000, 999999) # Generate validation_code
-
-            new_user = User(
-                name=name,
-                last_name=last_name,
-                username=username,
-                email=email,
-                password=hashed_password,
-                validation_code=validation_code,
-                plan_id=free_plan.id,
-            )
-            
-            # Send validation_code email
-            await send_email(new_user.email, "Magic Tales - Validate email", f"The validation code is: {new_user.validation_code}")
-
-            session.add(new_user)
+                hashed_password = await hash_password_async(password)
+                validation_code = random.randint(100000, 999999) # Generate validation_code
+                
+                if try_mode_user_id is not None and try_mode_user_id > 0:
+                    new_user = await session.get(User, try_mode_user_id)
+                    if not new_user:
+                        raise HTTPException(status_code=422, detail="The temporary user doesn't exist")
+                    
+                    if new_user.try_mode == 1:
+                        new_user.name = name
+                        new_user.last_name = last_name
+                        new_user.username = username
+                        new_user.email = email
+                        new_user.password = hashed_password
+                        new_user.validation_code = validation_code
+                        new_user.plan_id = free_plan.id
+                        new_user.try_mode = 0
+                    else:
+                        raise HTTPException(status_code=422, detail="The user is already registered")
+                else:
+                    new_user = User(
+                        name=name,
+                        last_name=last_name,
+                        username=username,
+                        email=email,
+                        password=hashed_password,
+                        validation_code=validation_code,
+                        plan_id=free_plan.id,
+                    )
+                    session.add(new_user)
+                
+                # Send validation_code email
+                await send_email(new_user.email, "Magic Tales - Validate email", f"The validation code is: {new_user.validation_code}")
             # The transaction will be committed at the end of the async with block
             # No need to explicitly call commit here
         logger.debug("Transaction committed.")
