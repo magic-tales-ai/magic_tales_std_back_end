@@ -15,8 +15,8 @@ from services.image_service import get_image_as_byte_64
 from services.user_service import check_validation_code
 from models.api.user_api import UserAPI
 from models.api.register_api import RegisterAPI
-from models.db.user import User
-from models.db.plan import Plan
+from magic_tales_models.models.user import User
+from magic_tales_models.models.plan import Plan
 import re
 import logging
 import random

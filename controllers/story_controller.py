@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db import get_session, transaction_context
 from services.session_service import check_token
 from services.image_service import get_image_as_byte_64
-from models.db.profile import Profile
-from models.db.story import Story
+from magic_tales_models.models.profile import Profile
+from magic_tales_models.models.story import Story
 from models.dto.story import Story as StoryDTO
 from models.api.story_api import StoryAPI
 import logging
