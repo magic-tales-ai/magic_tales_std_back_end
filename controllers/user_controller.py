@@ -11,10 +11,10 @@ from services.email_service import send_email
 from services.image_service import save_image_as_png, get_image_as_byte_64
 from services.user_service import check_validation_code, generate_random_string
 from services.session_service import create_access_token
-from models.db.story import Story
-from models.db.profile import Profile
-from models.db.user import User
-from models.db.plan import Plan
+from magic_tales_models.models.story import Story
+from magic_tales_models.models.profile import Profile
+from magic_tales_models.models.user import User
+from magic_tales_models.models.plan import Plan
 from models.dto.user import User as UserDTO
 from datetime import datetime
 import logging

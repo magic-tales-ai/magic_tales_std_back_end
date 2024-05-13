@@ -4,7 +4,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.future import select  # Use future select for compatibility with async
 from db import get_session, AsyncSession
-from models.db.plan import Plan
+from magic_tales_models.models.plan import Plan
 from models.dto.plan import Plan as PlanDTO
 from services.image_service import get_image_as_byte_64
 import logging
