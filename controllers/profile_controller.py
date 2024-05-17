@@ -48,15 +48,9 @@ async def get(
         if not profiles:
             logger.info(f"No profiles found for user ID: {token_data.get('user_id')}")
             
-        # Set Profiles IMAGES and DETAILS
+        # Set Profiles IMAGES
         profiles_folder = os.getenv("STATIC_FOLDER") + "/profiles"
         for profile in profiles:
-            profile.details = {
-                "name": profile.name,
-                "last_name": "",
-                "age": profile.age,
-                "description": profile.details
-            }.__str__()
             image_path = os.path.join(profiles_folder, str(profile.id) + ".png")
             if not os.path.exists(image_path):
                 profile.image = None
