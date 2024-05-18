@@ -81,6 +81,8 @@ async def get_by_id(
             raise HTTPException(
                 status_code=404, detail="Story not found or access denied"
             )
+            
+        story.profile.image = get_image_as_byte_64('/profiles', story.profile.id)
         return story
     except SQLAlchemyError as e:
         logger.error(f"Failed to fetch story by ID: {e}")

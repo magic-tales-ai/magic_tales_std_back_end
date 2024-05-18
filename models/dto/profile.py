@@ -5,6 +5,9 @@ from models.dto.user import User
 
 class Profile(BaseModel):
     id: int
+    name: Optional[str]
+    last_name: Optional[str]
+    age: Optional[int]
     details: str
     image: Optional[str]
     user_id: int
