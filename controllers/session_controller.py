@@ -89,6 +89,7 @@ async def login(
         voice_synthesis = user.plan.voice_synthesis,
         custommer_support = user.plan.custommer_support,
         description = user.plan.description,
+        enabled = user.plan.enabled,
         created_at = user.plan.created_at
     )
 
