@@ -14,6 +14,7 @@ from services.email_service import send_email
 from services.image_service import get_image_as_byte_64
 from services.user_service import check_validation_code
 from models.api.user_api import UserAPI
+from models.dto.plan import Plan as PlanDTO
 from models.api.register_api import RegisterAPI
 from magic_tales_models.models.user import User
 from magic_tales_models.models.plan import Plan
@@ -74,6 +75,22 @@ async def login(
     # Prepare and send response
     token_data = {"user_id": user.id, "username": user.username, "email": user.email}
     access_token = create_access_token(token_data)
+    
+    user_plan = PlanDTO(
+        id = user.plan.id,
+        name = user.plan.name,
+        image = get_image_as_byte_64("/plans", user.plan.id),
+        is_popular = user.plan.is_popular,
+        price = user.plan.price,
+        discount_per_year = user.plan.discount_per_year,
+        save_up_message = user.plan.save_up_message,
+        stories_per_month = user.plan.stories_per_month,
+        customization_options = user.plan.customization_options,
+        voice_synthesis = user.plan.voice_synthesis,
+        custommer_support = user.plan.custommer_support,
+        description = user.plan.description,
+        created_at = user.plan.created_at
+    )
 
     response = UserAPI(
         id=user.id,
@@ -83,6 +100,7 @@ async def login(
         email=user.email,
         image=get_image_as_byte_64("/users", user.id),
         token=access_token,
+        plan=user_plan
     )
 
     return response

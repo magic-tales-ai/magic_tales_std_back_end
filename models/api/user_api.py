@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-
+from models.dto.plan import Plan
 
 class UserAPI(BaseModel):
     id: int
@@ -10,3 +10,4 @@ class UserAPI(BaseModel):
     email: str
     token: Optional[str] = Field(None)
     image: Optional[str]
+    plan: Optional[Plan]
