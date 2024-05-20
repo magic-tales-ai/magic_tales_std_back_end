@@ -96,11 +96,14 @@ async def change_user_plan(
             if not plan:
                 logger.error(f"Plan {plan_id} not found")
                 raise HTTPException(status_code=404, detail="Plan not found")
+            
+            if not plan.enabled:
+                logger.error(f"Plan {plan.id} not enabled")
+                raise HTTPException(status_code=404, detail="Plan not enabled")
 
             user.plan_id = plan.id
             # Transaction will be automatically committed here
         logger.debug("Transaction committed.")
-        logger.info(f"User {user.id}'s plan changed to {plan.id}")
         return True
 
     except SQLAlchemyError as e:
