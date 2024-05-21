@@ -16,4 +16,5 @@ class Plan(BaseModel):
     voice_synthesis: Optional[str]
     custommer_support: Optional[str]
     description: Optional[dict]
+    enabled: bool
     created_at: datetime
