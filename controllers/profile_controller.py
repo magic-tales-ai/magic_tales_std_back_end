@@ -9,11 +9,13 @@ from db import get_session, transaction_context
 from services.session_service import check_token
 from services.files_service import save_image_as_png, get_image_as_byte_64, get_image_as_file_response
 from magic_tales_models.models.profile import Profile
+from magic_tales_models.models.story import Story
 from models.dto.profile import Profile as ProfileDTO
 from models.api.profile_api import ProfileAPI
 import logging
 import os
 import base64
+import shutil
 
 from utils.log_utils import get_logger
 
@@ -208,3 +210,49 @@ async def post(
         logger.error(f"Failed to create profile: {e}")
         # Rollback is handled automatically if an exception occurs within the with block
         raise HTTPException(status_code=500, detail="Failed to create profile")
+
+@profile_router.delete("/{id}", status_code=status.HTTP_200_OK)
+async def delete(
+    id: int,
+    session: AsyncSession = Depends(get_session),
+    token_data: dict = Depends(check_token),
+):
+    """
+    Asynchronously delete a profile and stories asociated
+
+    Args:
+        id (int): The Profile ID.
+        session (AsyncSession): The database session used for the operation.
+        token_data (dict): Token data for authentication and authorization.
+    """
+    try:
+        profile = await session.get(Profile, id)
+        if profile is None:
+            logger.info(f"Profile with ID: {id} not found")
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        if profile.user_id != token_data.get("user_id"):
+            logger.info(f"Cannot delete a profile of another user")
+            raise HTTPException(status_code=404, detail="Cannot delete a profile of another user")
+        
+        profile_stories = (await session.execute(
+            select(Story).where(Story.profile_id == profile.id)
+        )).scalars().all()
+        
+        logger.debug("Starting transaction...")
+        async with transaction_context(session):
+            for story in profile_stories:
+                if os.path.exists(story.story_folder):
+                    shutil.rmtree(story.story_folder)
+                await session.delete(story)
+            await session.delete(profile)
+            # The transaction will be committed at the end of the with block
+            # if no exceptions occur.
+        logger.debug("Transaction committed.")
+        
+        return True
+    except SQLAlchemyError as e:
+        await session.rollback()  # Explicit rollback in case of SQLAlchemy errors
+        logger.error(f"Failed to delete profile: {e}")
+        # Rollback is handled automatically if an exception occurs within the with block
+        raise HTTPException(status_code=500, detail="Failed to delete profile")
