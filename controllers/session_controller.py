@@ -11,7 +11,7 @@ from services.session_service import (
     verify_password,
 )
 from services.email_service import send_email
-from services.image_service import get_image_as_byte_64
+from services.files_service import get_image_as_byte_64
 from services.user_service import check_validation_code
 from models.api.user_api import UserAPI
 from models.dto.plan import Plan as PlanDTO

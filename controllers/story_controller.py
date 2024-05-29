@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import get_session, transaction_context
 from services.session_service import check_token
-from services.image_service import get_image_as_byte_64
+from services.files_service import get_image_as_byte_64, get_story_as_file_response
 from magic_tales_models.models.profile import Profile
 from magic_tales_models.models.story import Story
 from models.dto.story import Story as StoryDTO
@@ -164,3 +164,31 @@ async def delete(
         await session.rollback()  # Explicit rollback in case of SQLAlchemy errors
         logger.error(f"Failed to delete story: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete story")
+
+@story_router.get("/{id}/download", status_code=status.HTTP_200_OK)
+async def get_by_id(
+    id: int,
+    session: AsyncSession = Depends(get_session),
+    token_data: dict = Depends(check_token),
+):
+    """
+    Asynchronously retrieves a story file by its ID.
+
+    Args:
+        id (int): The ID of the story to retrieve.
+        session (AsyncSession): Dependency injection to provide an async session.
+        token_data (dict): User token data obtained from the dependency `check_token`.
+
+    Returns:
+        Story: The Story file if found.
+    """
+    try:
+        story = await session.get(Story, id)
+        if not story or story.profile.user_id != token_data.get("user_id"):
+            raise HTTPException(
+                status_code=404, detail="Story not found or access denied"
+            )
+        return get_story_as_file_response(story.story_folder)
+    except SQLAlchemyError as e:
+        logger.error(f"Failed to fetch story by ID: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch story by ID")

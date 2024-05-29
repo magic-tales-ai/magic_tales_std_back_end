@@ -40,3 +40,16 @@ def get_image_as_file_response(folder: str, id: int):
         return None
     else:
         return FileResponse(image_path)
+    
+def get_story_as_file_response(folder: str):
+    if not folder.startswith("/"):
+        folder = f"/{folder}"
+        
+    path = os.path.join(folder, "story.pdf")
+    
+    if not os.path.exists(path):
+        path = os.path.join(folder, "story.docx")
+        if not os.path.exists(path):
+            return None
+        
+    return FileResponse(path)

@@ -8,7 +8,7 @@ from sqlalchemy import func
 from db import get_session, transaction_context
 from services.session_service import check_token, verify_password_async, hash_password_async
 from services.email_service import send_email
-from services.image_service import save_image_as_png, get_image_as_byte_64
+from services.files_service import save_image_as_png, get_image_as_byte_64
 from services.user_service import check_validation_code, generate_random_string
 from services.session_service import create_access_token
 from magic_tales_models.models.story import Story

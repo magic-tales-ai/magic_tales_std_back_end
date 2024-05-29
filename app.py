@@ -6,7 +6,6 @@ load_dotenv()  # Load .env variables before db.py
 
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from middlewares import (
     AddJWTToResponseMiddleware,
     ErrorHandlerMiddleware,
@@ -36,7 +35,6 @@ EXCLUDED_PATHS = [
     "/session/login-swagger",
     "/docs",
     "/openapi.json",
-    "/static",
 ]
 app.add_middleware(AddJWTToResponseMiddleware, excluded_paths=EXCLUDED_PATHS)
 app.add_middleware(ErrorHandlerMiddleware)
@@ -48,9 +46,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-static_folder = os.getenv("STATIC_FOLDER")
-app.mount(static_folder, StaticFiles(directory=static_folder), name="static")
 
 if __name__ == "__main__":
     uvicorn.run(

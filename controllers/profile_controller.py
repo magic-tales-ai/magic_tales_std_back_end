@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 
 from db import get_session, transaction_context
 from services.session_service import check_token
-from services.image_service import save_image_as_png, get_image_as_byte_64, get_image_as_file_response
+from services.files_service import save_image_as_png, get_image_as_byte_64, get_image_as_file_response
 from magic_tales_models.models.profile import Profile
 from models.dto.profile import Profile as ProfileDTO
 from models.api.profile_api import ProfileAPI
