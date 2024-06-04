@@ -101,7 +101,8 @@ async def login(
         email=user.email,
         image=get_image_as_byte_64("/users", user.id),
         token=access_token,
-        plan=user_plan
+        plan=user_plan,
+        language=user.language
     )
 
     return response
@@ -114,6 +115,7 @@ async def register(
     email: Annotated[str, Form()],
     username: Annotated[str, Form()],
     password: Annotated[str, Form()],
+    language: Annotated[str, Form()],
     try_mode_user_id: int = Form(None),
     session: AsyncSession = Depends(get_session),
 ):
@@ -124,6 +126,7 @@ async def register(
         email (str): The email of the user to register.
         username (str): The desired username of the new user.
         password (str): The password for the new user account.
+        language (str): The language of the user to register.
         session (AsyncSession): Injected database session for executing asynchronous database operations.
 
     Returns:
@@ -163,6 +166,7 @@ async def register(
                         new_user.username = username
                         new_user.email = email
                         new_user.password = hashed_password
+                        new_user.language = language
                         new_user.validation_code = validation_code
                         new_user.plan_id = free_plan.id
                         new_user.try_mode = 0
@@ -175,6 +179,7 @@ async def register(
                         username=username,
                         email=email,
                         password=hashed_password,
+                        language=language,
                         validation_code=validation_code,
                         plan_id=free_plan.id,
                     )
@@ -190,7 +195,7 @@ async def register(
         logger.info(f"Registered new user: {username}")
 
         return RegisterAPI(
-            id=new_user.id, name=new_user.name, last_name=new_user.last_name, username=new_user.username, email=new_user.email
+            id=new_user.id, name=new_user.name, last_name=new_user.last_name, username=new_user.username, email=new_user.email, language=language
         )
 
     except SQLAlchemyError as e:
