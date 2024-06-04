@@ -8,3 +8,4 @@ class RegisterAPI(BaseModel):
     last_name: str
     username: str
     email: str
+    language: str
