@@ -18,6 +18,7 @@ from controllers.profile_controller import profile_router
 from controllers.story_controller import story_router
 from controllers.plan_controller import plan_router
 from controllers.user_controller import user_router
+from controllers.system_controller import system_router
 
 app = FastAPI()
 
@@ -27,6 +28,7 @@ app.include_router(profile_router)
 app.include_router(story_router)
 app.include_router(plan_router)
 app.include_router(user_router)
+app.include_router(system_router)
 
 # Middlewares
 EXCLUDED_PATHS = [
