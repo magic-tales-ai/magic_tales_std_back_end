@@ -1,39 +1,45 @@
 from typing import List
-from fastapi import APIRouter, status, Depends, HTTPException, Form
-from models.dto.language import Language
+from fastapi import APIRouter, status, Depends, HTTPException
+from sqlalchemy.exc import SQLAlchemyError
+from magic_tales_models.models.language import Language
+from models.dto.language import Language as LanguageDTO
+from db import get_session, AsyncSession
+from sqlalchemy.future import select # Use future select for compatibility with async
+from sqlalchemy import asc
+import logging
+from utils.log_utils import get_logger
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+# Get a logger instance for this module
+logger = get_logger(__name__)
 
 system_router = APIRouter(prefix="/system", tags=["System"])
 
-@system_router.get("/languages", status_code=status.HTTP_200_OK, response_model=List[Language])
-async def languages():
-    return [
-        Language(code="CMN", name="Mandarin Chinese"),
-        Language(code="SPA", name="Spanish"),
-        Language(code="ENG", name="English"),
-        Language(code="HIN", name="Hindi"),
-        Language(code="BEN", name="Bengali"),
-        Language(code="POR", name="Portuguese"),
-        Language(code="RUS", name="Russian"),
-        Language(code="JPN", name="Japanese"),
-        Language(code="PNB", name="Western Punjabi"),
-        Language(code="MAR", name="Marathi"),
-        Language(code="TEL", name="Telugu"),
-        Language(code="WUU", name="Wu Chinese"),
-        Language(code="TUR", name="Turkish"),
-        Language(code="KOR", name="Korean"),
-        Language(code="FRA", name="French"),
-        Language(code="DEU", name="German"),
-        Language(code="VIE", name="Vietnamese"),
-        Language(code="TAM", name="Tamil"),
-        Language(code="YUE", name="Yue Chinese"),
-        Language(code="URD", name="Urdu"),
-        Language(code="ITA", name="Italian"),
-        Language(code="ARA", name="Arabic"),
-        Language(code="FIL", name="Filipino"),
-        Language(code="POL", name="Polish"),
-        Language(code="UKR", name="Ukrainian"),
-        Language(code="THA", name="Thai"),
-        Language(code="MAL", name="Malay"),
-        Language(code="SWA", name="Swahili"),
-        Language(code="NLD", name="Dutch"),
-    ]
+@system_router.get("/languages", status_code=status.HTTP_200_OK, response_model=List[LanguageDTO])
+async def languages(session: AsyncSession = Depends(get_session)):
+    """_summary_
+    Asynchronously retrieves all languages from the database.
+
+    Args:
+        session (AsyncSession): The database session used to execute queries.
+
+    Returns:
+        List[Language]: A list of Language objects representing all languages found in the database.
+
+    Raises:
+        HTTPException: An exception is raised if there is an issue accessing the database or if no languages are found.
+    """
+    try:
+        result = await session.execute(select(Language).order_by(asc(Language.name)))
+        languages = result.scalars().all()
+        if not languages:
+            # If no languages are found, log the event and raise a 404 HTTPException
+            logger.info("No languages found in the database.")
+            raise HTTPException(status_code=404, detail="No languages found")
+            
+        return languages
+    except SQLAlchemyError as e:
+        # Log the specific database error and raise a 500 HTTPException
+        logger.error(f"Database error while fetching languages: {e}")
+        raise HTTPException(status_code=500, detail="Database error occurred")
