@@ -14,4 +14,5 @@ class User(BaseModel):
     plan_id: int
     plan: Plan
     assistant_id: Optional[str]
+    language: str
     created_at: datetime

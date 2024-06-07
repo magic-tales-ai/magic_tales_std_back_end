@@ -6,7 +6,7 @@ from sqlalchemy.future import select  # Use future select for compatibility with
 from db import get_session, AsyncSession
 from magic_tales_models.models.plan import Plan
 from models.dto.plan import Plan as PlanDTO
-from services.image_service import get_image_as_byte_64
+from services.files_service import get_image_as_byte_64
 import logging
 import os
 

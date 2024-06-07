@@ -8,7 +8,7 @@ from sqlalchemy import func
 from db import get_session, transaction_context
 from services.session_service import check_token, verify_password_async, hash_password_async
 from services.email_service import send_email
-from services.image_service import save_image_as_png, get_image_as_byte_64
+from services.files_service import save_image_as_png, get_image_as_byte_64
 from services.user_service import check_validation_code, generate_random_string
 from services.session_service import create_access_token
 from magic_tales_models.models.story import Story
@@ -117,6 +117,7 @@ async def update_user(
     last_name: str = Form(None),
     email: str = Form(None),
     username: str = Form(None),
+    language: str = Form(None),
     image: UploadFile = File(None),
     session: AsyncSession = Depends(get_session),
     token_data: dict = Depends(check_token)
@@ -175,6 +176,9 @@ async def update_user(
                     raise HTTPException(status_code=422, detail="Username is in use.")
                 
                 user.username = username
+                
+            if language is not None and language != user.language and len(language) == 3:
+                user.language = language
                 
             if image is not None:
                 allowed_extensions = { '.jpg', '.jpeg', '.png' }

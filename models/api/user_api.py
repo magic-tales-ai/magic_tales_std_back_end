@@ -11,3 +11,4 @@ class UserAPI(BaseModel):
     token: Optional[str] = Field(None)
     image: Optional[str]
     plan: Optional[Plan]
+    language: str
