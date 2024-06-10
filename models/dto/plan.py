@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class Plan(BaseModel):
     id: int
     name: str
-    image: str
+    image: Optional[str]
     is_popular: bool
     price: float
     discount_per_year: Optional[float]
