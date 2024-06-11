@@ -18,6 +18,7 @@ from models.dto.plan import Plan as PlanDTO
 from models.api.register_api import RegisterAPI
 from magic_tales_models.models.user import User
 from magic_tales_models.models.plan import Plan
+from datetime import datetime
 import re
 import logging
 import random
@@ -104,6 +105,9 @@ async def login(
         plan=user_plan,
         language=user.language
     )
+    
+    async with transaction_context(session):
+        user.last_visited = datetime.now()
 
     return response
 

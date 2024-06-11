@@ -6,6 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 from services.logger_service import LoggerService
 from services.session_service import refresh_access_token
+import traceback
 
 logger_service = LoggerService()
 
@@ -25,7 +26,15 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
         except HTTPException as e:
             return JSONResponse(status_code=e.status_code, content={"message": e.detail})
         except Exception as e:
-            logger_service.error(f"Unhandled exception for {request.url}: {e}")
+            trace = traceback.extract_tb(e.__traceback__)
+            project_trace = next((t for t in trace if '\controllers' in t.filename or '\services' in t.filename), None)
+
+            if project_trace:
+                filename = project_trace.filename
+            else:
+                filename = "UndefinedModule"
+                
+            logger_service.error(f"Unhandled exception for {request.url}: {e}", filename)
             message = str(e.args[0]) if e.args else "Internal server error"
             return JSONResponse(status_code=500, content={"message": message})
 
