@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db import get_session, transaction_context
 from services.session_service import check_token
-from services.files_service import get_image_as_byte_64, get_story_as_file_response
+from services.files_service import get_image_as_byte_64, get_story_as_file_response, get_story_cover_as_byte_64
 from magic_tales_models.models.profile import Profile
 from magic_tales_models.models.story import Story
 from models.dto.story import Story as StoryDTO
@@ -50,6 +50,7 @@ async def get(
         )
         stories = stories.scalars().all()
         for story in stories:
+            story.image = get_story_cover_as_byte_64(story.story_folder + "/images")
             story.profile.image = get_image_as_byte_64('/profiles', story.profile.id)
 
         return stories
@@ -82,6 +83,7 @@ async def get_by_id(
                 status_code=404, detail="Story not found or access denied"
             )
             
+        story.image = get_story_cover_as_byte_64(story.story_folder + "/images")
         story.profile.image = get_image_as_byte_64('/profiles', story.profile.id)
         return story
     except SQLAlchemyError as e:

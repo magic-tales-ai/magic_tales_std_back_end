@@ -8,6 +8,7 @@ class Story(BaseModel):
     id: int
     profile_id: int
     ws_session_uid: str
+    image: Optional[str]
     profile: Profile
     title: Optional[str]
     features: Optional[str]

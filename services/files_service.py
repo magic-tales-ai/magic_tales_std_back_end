@@ -53,3 +53,15 @@ def get_story_as_file_response(folder: str):
             return None
         
     return FileResponse(path)
+
+def get_story_cover_as_byte_64(folder: str):
+    if not folder.startswith("/"):
+        folder = f"/{folder}"
+    
+    cover_path = os.path.join(folder, "cover.png")
+    
+    if not os.path.exists(cover_path):
+        return None
+    else:
+        with open(cover_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode("utf-8")
