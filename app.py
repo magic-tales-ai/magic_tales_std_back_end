@@ -12,7 +12,8 @@ from middlewares import (
     validation_exception_handler,
 )
 from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+
+# from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from controllers.session_controller import session_router
 from controllers.profile_controller import profile_router
@@ -22,7 +23,7 @@ from controllers.user_controller import user_router
 from controllers.system_controller import system_router
 
 app = FastAPI()
-app.add_middleware(HTTPSRedirectMiddleware)
+# app.add_middleware(HTTPSRedirectMiddleware)
 
 # Include routers
 app.include_router(session_router)
